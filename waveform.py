@@ -1,5 +1,4 @@
 import BBHX_PhenomD
-import LISA as li
 import numpy as np
 from pycbc.waveform import get_td_waveform, get_fd_waveform
 from pycbc.filter import resample_to_delta_t, highpass, matched_filter, sigma
