@@ -8,21 +8,34 @@ from astropy.cosmology import Planck18 as cosmo
 def create_dist(diameter, redshift,n,
                 lam,beta,           
                 plot = False, save = False):  ### Generate a random uniform spherical distribution ###
-    
-    
+   
+    ### ARGUEMENTS: ###
+    #####################################################################################################################################
+    ### diameter: The diameter of the distribution, best to define in MPC as the context for the distribution is galaxy clusters. #######
+    ### redshift: The distance to the object, usually between 0 and 20, the code will translate this to MPC.                      #######
+    ### n: The number of samples you want generated on the sphere.                                                                #######
+    ### lam,beta: The ecliptic longitude and latitude respectively: LIMITS: 0<lam<pi/2 ; -pi/2 < beta < pi/2.                     #######
+    ### plot: If true, it will plot the distribution, useful for checking everything worked.                                      #######
+    ### save: If true, it will save the distribution as an numpy array in PWD.                                                    #######
+    #####################################################################################################################################
+    if lam<0 or lam>np.pi * 2:
+      raise Exception("Lambda must be between 0 and 2pi")
+      
+    if beta<-np.pi/2 or beta>np.pi/2:
+      raise Exception("Beta must be between -pi/2 and pi/2")
     radius = diameter / cosmo.luminosity_distance(redshift).value # rads # 
-    x = np.random.uniform(low=-2*radius, high=2*radius, size=20000)
-    y = np.random.uniform(low=-2*radius, high=2*radius, size=20000)
-    z = np.random.uniform(low=-2*radius, high=2*radius, size=20000)
+    x = np.random.uniform(low=-2*radius, high=2*radius, size=n*50) ## Hopefully this guarantees you will always have enough points within the sphere ##
+    y = np.random.uniform(low=-2*radius, high=2*radius, size=n*50)
+    z = np.random.uniform(low=-2*radius, high=2*radius, size=n*50)
 
-    # Reject points that are outside the sphere #
+    ## Rejection sampling to exclude points not on the sphere ##
 
     r = np.sqrt(x**2 + y**2)
     x = x[r <= 1.2*radius]
     y = y[r <= 1.2*radius]
     z = z[r <= 1.2*radius]
 
-        # Scale points to lie on the surface of the sphere
+     ## Scaling ##
     r = np.sqrt(x**2 + y**2 + z**2)
     
     x = radius * x / r + lam
