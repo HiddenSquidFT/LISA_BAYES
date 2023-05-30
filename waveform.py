@@ -24,6 +24,10 @@ import pickle
 
 
 def waveform_gen(number_of_mergers, mass_low, mass_high, write_to_file=False):
+    ### ARGUEMENTS ####
+    ### number_of_mergers: The amount of waveforms you want to generate between mass_low and mass_high. ###
+    ### mass_low, mass_high: The lower and upper limits of the component mass of the merger you want to generate, the code will ensure m1>m2. ###
+    ### write_to_file: If True it will write the gwf files, set to False by default because the files are large and will take time to write. ###
     
     
     from circle import create_dist
@@ -31,7 +35,7 @@ def waveform_gen(number_of_mergers, mass_low, mass_high, write_to_file=False):
     
     circle = create_dist(7,0.5,500,0,0) ### Generate circle from circle.py ###
     
-    lam_f,beta_f,z_f = zip(*circle[0]) ### Unzip our false positions, we zipped to surpress the output of create_dist ###
+    lam_f,beta_f,z_f = zip(*circle[0]) ### Unzip our false positions, we zipped to surpress the output of create_dist when calling waveform_gen ###
     
     
     
@@ -51,7 +55,7 @@ def waveform_gen(number_of_mergers, mass_low, mass_high, write_to_file=False):
 
     print(f) # Should have last value equal to delta_t / 2
     freq_new = f # Remove first 0 point from here
-    m_arr = np.logspace(np.log10(mass_low),np.log10(mass_high),number_of_mergers)
+    m_arr = np.logspace(np.log10(mass_low),np.log10(mass_high),number_of_mergers) ### Initialse mass array ###
 
 
 
@@ -67,25 +71,28 @@ def waveform_gen(number_of_mergers, mass_low, mass_high, write_to_file=False):
         ### SAME PARAMETERS FOR BOTH POTENTIAL LOCATIONS ###
         chi1z = np.random.uniform(-0.99,0.99)
         chi2z = np.random.uniform(-0.99,0.99)
-        m1 = np.random.uniform(1,5)*m
+        m1 = np.random.uniform(1,5)*m    ### Ensure m1>m2, this also sets 1<q<5
         m2 = m
         dist = cosmo.luminosity_distance(0.5).value  * PC_SI * 1e6  ## ANCHOR ONE MERGER TO A DISTANCE ##
-        inc = circle[2]
+        inc = circle[2]  ### The inclination is saved in the output of cirlce.py ###
         psi = np.pi/5 # polarization angle 
         #################################
 
 
-
+         
         t_obs_start = 1
-        beta = inc   # ecliptic latitude    #### FIX SKY POSITION #####
-        lam = circle[1]  # ecliptic longitude
+        
+        #### FIX SKY POSITION for all model A (true) mergers #####
+        
+        beta = inc   # Ecliptic latitude     
+        lam = circle[1]  # Ecliptic longitude, also stored from circle.py ##
         t_ref = 4800021
         coord = SSB_to_LISA(t_ref,lam,beta,psi)   ### TRANSLATE TO LISA COORDS FOR INFERENCE ###
         #print(coord)
         wave = wave_gen(m1, m2, chi1z, chi2z,
-                                  dist, phi_ref, f_ref, inc, lam, 
+                                  dist, phi_ref, f_ref, inc, lam,   
                                   beta, psi, t_ref, freqs=f,   
-                                  direct=False, fill=True, squeeze=True, length=1024)[0]
+                                  direct=False, fill=True, squeeze=True, length=1024)[0]   ## This part is the generation code ##
 
 
         param_values =[m1,m2,chi1z,chi2z,dist,inc,coord[2],coord[1],coord[3]]   
@@ -240,9 +247,9 @@ def waveform_gen(number_of_mergers, mass_low, mass_high, write_to_file=False):
         dist_false = np.random.choice(z_f)
         #cosmo.luminosity_distance(np.random.choice(z_rand)).value  * PC_SI * 1e6
 
-       # print("lat:",beta,"false lat:",beta_false,"long:",lam,"false long:",lam_false,dist_false)
-    ## PRIOR VOLUMES MUST BE IDENTICAL ##
-        coord_B = SSB_to_LISA(t_ref,lam_false,beta_false,psi) 
+       ## This sets up our model B (false) for model comparison in the next step ##
+       ## PRIOR VOLUMES MUST BE IDENTICAL ##
+        coord_B = SSB_to_LISA(t_ref,lam_false,beta_false,psi) ## Translate false coordinates to LISA frame ##
 
         print(dist,dist_false)
 
@@ -252,7 +259,7 @@ def waveform_gen(number_of_mergers, mass_low, mass_high, write_to_file=False):
 
 
         for jdx,j in enumerate(param_names):
-            merger_values_false[j] = param_values_false[jdx]  ### WRITE NESTED DICTIONARY INTO I'TH ELEMENT OF DICTIONARY ###
+            merger_values_false[j] = param_values_false[jdx]  ### WRITE NESTED DICTIONARY INTO i'th ELEMENT OF DICTIONARY ###
         false_dict[i] = merger_values_false
         #print(false_dict)               
 
@@ -402,7 +409,7 @@ def waveform_gen(number_of_mergers, mass_low, mass_high, write_to_file=False):
         print(beta,beta_false)
         print(("angular seperation is",astropy.coordinates.angular_separation(coord[1],coord[2],coord_B[1],coord_B[2])))
 
-       ## This is where we translate our waveforms into the class types accepted by PyCBC, again so we can write the files ###
+       ## This is where we translate our waveforms into the class types accepted by PyCBC, so we can write the .gwf files ###
         wave_A_response_GAL_A = FrequencySeries(wave[0], delta_f=1/(31536000), epoch=0).to_timeseries(delta_t=1)
         wave_E_response_GAL_A = FrequencySeries(wave[1], delta_f=1/(31536000), epoch=0).to_timeseries(delta_t=1)
         wave_T_response_GAL_A = FrequencySeries(wave[2], delta_f=1/(31536000), epoch=0).to_timeseries(delta_t=1)
@@ -454,5 +461,5 @@ def waveform_gen(number_of_mergers, mass_low, mass_high, write_to_file=False):
         
         ''')
     write.close()
-
- 
+    
+    # :) # 
